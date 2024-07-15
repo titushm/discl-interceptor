@@ -4,12 +4,37 @@
 #include <stdlib.h>
 #include <string.h>
 
+typedef void (__stdcall *Py_Initialize)(void);
+typedef int (__stdcall *Py_BytesMain)(int argc, char** argv);
+
+char* find_pth_file(const char* base_path) {
+	WIN32_FIND_DATA find_file_data;
+	HANDLE h_find = INVALID_HANDLE_VALUE;
+	char search_path[MAX_PATH];
+	char *pth_file = NULL;
+	snprintf(search_path, MAX_PATH, "%s\\*._pth", base_path);
+	h_find = FindFirstFile(search_path, &find_file_data);
+	if (h_find == INVALID_HANDLE_VALUE) {
+		MessageBox(NULL, "Could not find _pth file", "Discl", MB_OK);
+		return NULL;
+	} else {
+		pth_file = (char*)malloc(strlen(find_file_data.cFileName) + 1);
+		if (pth_file == NULL) {
+			perror("malloc");
+			FindClose(h_find);
+			return NULL;
+		}
+		strcpy(pth_file, find_file_data.cFileName);
+		FindClose(h_find);
+		return pth_file;
+	}
+}
+
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
 	LPWSTR lpCmdLineWide = GetCommandLineW();
 	int argc;
 	LPWSTR *argvWide = CommandLineToArgvW(lpCmdLineWide, &argc);
-
 	char **argv = (char **)malloc(argc * sizeof(char *));
 	for (int i = 0; i < argc; ++i)
 	{
@@ -19,9 +44,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	}
 
 	char *APPDATA = getenv("LOCALAPPDATA");
-
 	bool processStartArgProvided = false;
 	bool uninstallArgProvided = false;
+
 	if (argc == 1)
 	{
 		processStartArgProvided = true;
@@ -44,22 +69,38 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 	if (processStartArgProvided)
 	{
-		char *DISCL_PATH = strcat(APPDATA, "\\discl\\discl-main\\src\\discl.py");
-		char command[4096];
-		snprintf(command, sizeof(command), "python %s", DISCL_PATH);
-		STARTUPINFO si;
-		PROCESS_INFORMATION pi;
-		ZeroMemory(&si, sizeof(si));
-		si.cb = sizeof(si);
-		si.dwFlags = STARTF_USESHOWWINDOW;
-		si.wShowWindow = SW_HIDE;
+		char DISCL_PATH[MAX_PATH];
+		char PYTHON_DLL_PATH[MAX_PATH];
+		char PYTHON_PATH[MAX_PATH];
+		snprintf(DISCL_PATH, sizeof(DISCL_PATH), "%s\\discl\\discl-main\\src\\discl.py", APPDATA);
+		snprintf(PYTHON_PATH, sizeof(PYTHON_PATH), "%s\\discl\\python", APPDATA);
+		char* dll_path = find_pth_file(PYTHON_PATH);
+		char *ext_position = strstr(dll_path, "_pth");
+		size_t position = ext_position - dll_path;
+		strncpy(dll_path + position, "dll", 4);
 
-		if (CreateProcess(NULL, command, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi))
+		HMODULE hPythonDLL = LoadLibrary(dll_path);
+		if (hPythonDLL == NULL)
 		{
-			WaitForSingleObject(pi.hProcess, INFINITE);
-			CloseHandle(pi.hProcess);
-			CloseHandle(pi.hThread);
+			MessageBox(NULL, "Could not find python dll", "Error", MB_OK | MB_ICONERROR);
+			return 1;
 		}
+		Py_Initialize py_Initialize = (Py_Initialize)GetProcAddress(hPythonDLL, "Py_Initialize");
+		Py_BytesMain py_BytesMain = (Py_BytesMain)GetProcAddress(hPythonDLL, "Py_BytesMain");
+		if (py_Initialize == NULL || py_BytesMain == NULL)
+		{
+			MessageBox(NULL, "Could not find python functions", "Error", MB_OK | MB_ICONERROR);
+			return 1;
+		}
+		py_Initialize();
+
+		char** pyargv = malloc((argc+1)*sizeof pyargv[0]);
+		pyargv[0] = argv[0];
+		pyargv[1] = DISCL_PATH;
+		for (int i = 1; i < argc; i++) { pyargv[i+1] = argv[i]; }
+		py_BytesMain(argc+1, pyargv);
+		FreeLibrary(hPythonDLL);
+		// return 0;
 	}
 	else
 	{
@@ -82,5 +123,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		}
 	}
 
+	for (int i = 0; i < argc; ++i)
+	{
+		free(argv[i]);
+	}
+	free(argv);
+	LocalFree(argvWide);
 	return 0;
 }
