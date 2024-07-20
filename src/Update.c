@@ -18,13 +18,13 @@ char* find_pth_file(const char* base_path) {
 		MessageBox(NULL, "Could not find _pth file", "Discl", MB_OK);
 		return NULL;
 	} else {
-		pth_file = (char*)malloc(strlen(find_file_data.cFileName) + 1);
+		pth_file = (char*)malloc(strlen(find_file_data.cFileName) + strlen(base_path) + 2);
 		if (pth_file == NULL) {
 			perror("malloc");
 			FindClose(h_find);
 			return NULL;
 		}
-		strcpy(pth_file, find_file_data.cFileName);
+		snprintf(pth_file, strlen(find_file_data.cFileName) + strlen(base_path) + 2, "%s\\%s", base_path, find_file_data.cFileName);
 		FindClose(h_find);
 		return pth_file;
 	}
@@ -85,10 +85,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		snprintf(PYTHON_PATH, sizeof(PYTHON_PATH), "%s\\discl-main\\src\\discl.py", DISCL_PATH);
 		snprintf(PYTHON_DIRECTORY_PATH, sizeof(PYTHON_DIRECTORY_PATH), "%s\\python", DISCL_PATH);
 		char* dll_path = find_pth_file(PYTHON_DIRECTORY_PATH);
-		char *ext_position = strstr(dll_path, "_pth");
+		char* ext_position = strstr(dll_path, "_pth");
 		size_t position = ext_position - dll_path;
 		strncpy(dll_path + position, "dll", 4);
+		snprintf(PYTHON_DIRECTORY_PATH, sizeof(PYTHON_DIRECTORY_PATH), "%s\\python", DISCL_PATH);
 		HMODULE hPythonDLL = LoadLibrary(dll_path);
+		MessageBox(NULL, dll_path, "Discl", MB_OK);
 		if (hPythonDLL == NULL)
 		{
 			MessageBox(NULL, "Could not find python dll", "Error", MB_OK | MB_ICONERROR);
