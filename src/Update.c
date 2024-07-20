@@ -44,6 +44,16 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	}
 
 	char *APPDATA = getenv("LOCALAPPDATA");
+	char *DISCL_LOCATION = strcat(APPDATA, "\\discord\\discl_location.txt");
+	FILE* location = fopen(DISCL_LOCATION, "r");
+	if (location == NULL)
+	{
+		MessageBox(NULL, "Could not find discl location", "Discl", MB_OK);
+		return 1;
+	}
+	char DISCL_PATH[MAX_PATH];
+	fread(DISCL_PATH, MAX_PATH, sizeof(char), location);
+	fclose(location);
 	bool processStartArgProvided = false;
 	bool uninstallArgProvided = false;
 
@@ -69,16 +79,15 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 	if (processStartArgProvided)
 	{
-		char DISCL_PATH[MAX_PATH];
 		char PYTHON_DLL_PATH[MAX_PATH];
 		char PYTHON_PATH[MAX_PATH];
-		snprintf(DISCL_PATH, sizeof(DISCL_PATH), "%s\\discl\\discl-main\\src\\discl.py", APPDATA);
-		snprintf(PYTHON_PATH, sizeof(PYTHON_PATH), "%s\\discl\\python", APPDATA);
-		char* dll_path = find_pth_file(PYTHON_PATH);
+		char PYTHON_DIRECTORY_PATH[MAX_PATH];
+		snprintf(PYTHON_PATH, sizeof(PYTHON_PATH), "%s\\discl-main\\src\\discl.py", DISCL_PATH);
+		snprintf(PYTHON_DIRECTORY_PATH, sizeof(PYTHON_DIRECTORY_PATH), "%s\\python", DISCL_PATH);
+		char* dll_path = find_pth_file(PYTHON_DIRECTORY_PATH);
 		char *ext_position = strstr(dll_path, "_pth");
 		size_t position = ext_position - dll_path;
 		strncpy(dll_path + position, "dll", 4);
-
 		HMODULE hPythonDLL = LoadLibrary(dll_path);
 		if (hPythonDLL == NULL)
 		{
@@ -96,11 +105,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 		char** pyargv = malloc((argc+1)*sizeof pyargv[0]);
 		pyargv[0] = argv[0];
-		pyargv[1] = DISCL_PATH;
+		pyargv[1] = PYTHON_PATH;
 		for (int i = 1; i < argc; i++) { pyargv[i+1] = argv[i]; }
 		py_BytesMain(argc+1, pyargv);
 		FreeLibrary(hPythonDLL);
-		// return 0;
+		return 0;
 	}
 	else
 	{
