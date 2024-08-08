@@ -90,7 +90,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		strncpy(dll_path + position, "dll", 4);
 		snprintf(PYTHON_DIRECTORY_PATH, sizeof(PYTHON_DIRECTORY_PATH), "%s\\python", DISCL_PATH);
 		HMODULE hPythonDLL = LoadLibrary(dll_path);
-		MessageBox(NULL, dll_path, "Discl", MB_OK);
 		if (hPythonDLL == NULL)
 		{
 			MessageBox(NULL, "Could not find python dll", "Error", MB_OK | MB_ICONERROR);
