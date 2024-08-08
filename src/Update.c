@@ -27,7 +27,7 @@ wchar_t* find_pth_file(const wchar_t* base_path) {
 		exitMsg(false, L"malloc failed probably out of RAM", NULL);
 		return NULL;
 	}
-	swprintf(search_path, search_path_len, "%s"pth_ext, base_path);
+	swprintf(search_path, search_path_len+1, "%s"pth_ext, base_path);
 
 	WIN32_FIND_DATA find_file_data;
 	HANDLE h_find = FindFirstFile(search_path, &find_file_data);
@@ -52,7 +52,6 @@ wchar_t* find_pth_file(const wchar_t* base_path) {
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
 	int argc;
 	LPWSTR *argv = CommandLineToArgvW(GetCommandLineW(), &argc);
-
 	wchar_t* APPDATA = _wgetenv(L"LOCALAPPDATA");
 	#define discord_discl_location L"\\discord\\discl_location.txt"
 	size_t discl_location_len = wcslen(APPDATA)+wcslen(discord_discl_location);
@@ -60,10 +59,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	if (discl_location == NULL) {
 		return exitMsg(true, L"malloc failed probably out of RAM", argv);
 	}
-	swprintf(discl_location, discl_location_len, L"%s"discord_discl_location, APPDATA);
+	swprintf(discl_location, discl_location_len+1, L"%s"discord_discl_location, APPDATA);
 	FILE* location = _wfopen(discl_location, L"r");
-	free(discl_location);
+	// free(discl_location);
 	if (location == NULL) {
+		MessageBox(NULL, discl_location, L"Discl", MB_OK);
 		return exitMsg(true, L"Could not find discl location", argv);
 	}
 	fseek(location, 0, SEEK_END);
@@ -131,7 +131,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		if (python_directory_path == NULL) {
 			return exitMsg(true, L"malloc failed probably out of RAM", argv);
 		}
-		swprintf(python_directory_path, python_directory_path_len, L"%s"slash_python, discl_path);
+		swprintf(python_directory_path, python_directory_path_len+1, L"%s"slash_python, discl_path);
 
 		wchar_t* dll_path = find_pth_file(python_directory_path);
 		free(python_directory_path);
@@ -159,7 +159,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		if (python_path == NULL) {
 			return exitMsg(true, L"malloc failed probably out of RAM", argv);
 		}
-		swprintf(python_path, python_path_len, L"%s"discl_main_src_discl_py, discl_path);
+		swprintf(python_path, python_path_len+1, L"%s"discl_main_src_discl_py, discl_path);
 
 		wchar_t** pyargv = calloc(argc+1, sizeof(pyargv[0]));
 		if (pyargv == NULL) {
@@ -185,7 +185,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	#define discord_update_discord L"\\Discord\\Update_Discord.exe"
 	size_t command_len = wcslen(APPDATA)+wcslen(discord_update_discord)+wcslen(L" ");
 	wchar_t* command = calloc(command_len+1, sizeof(command[0]));
-	swprintf(command, command_len, L"%s"discord_update_discord,APPDATA);
+	swprintf(command, command_len+1, L"%s"discord_update_discord,APPDATA);
 	STARTUPINFO si;
 	ZeroMemory(&si, sizeof(si));
 	si.cb = sizeof(si);
